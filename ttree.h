@@ -20,6 +20,7 @@
 #ifndef _TTREE_H_  
 #define _TTREE_H_  
 
+#include <stdint.h>
 #include <assert.h>
 #include <math.h>  
 #include <assert.h>
@@ -41,10 +42,10 @@
 #include <io.h>
 #endif
 
-#define KV_SIZE unsigned int
-#define NODE_SIZE 2048
-#define ITEM_NUM 125
-#define MIN_KEY (125-2)
+#define KV_SIZE uint32_t
+#define NODE_SIZE 1024
+#define ITEM_NUM 124
+#define MIN_KEY (124-2)
 #define NODE_NUM (1024)
 #define PATH "/home/qyt/ttree_nvml_integer/mydata"
 #define PMEM_LEN ((off_t)(1<<30))
@@ -76,17 +77,19 @@ typedef struct _key_value_pair
 {
     unsigned long int  dm_node_num;
 }DM_META;*/
-  
+#pragma pack(4)  
 typedef struct tagTTREENODE  
 {   
     char *pmem_add;
-    unsigned int pmem_id;
 	tagTTREENODE *left;         // Left child pointer.  
     tagTTREENODE *right;        // Right child pointer.  
-    int nItems;  // Internal node items.  
     kv_t item[ITEM_NUM];
-    char bf;                   // Balabce factor(bf = right subtree height - left subtree height)     
+    uint16_t nItems;  // Internal node items.  
+    uint16_t pmem_id;
+    int8_t bf;                   // Balabce factor(bf = right subtree height - left subtree height)     
 }TTREENODE;  
+#pragma
+
 
 template  <typename Key>
 class ttree_default_set_traits
@@ -300,7 +303,7 @@ unsigned long int Find(const unsigned long int key)
         }  
     }  
     fprintf(stdout,"The function %s : Can not find the k-v pair\n",__func__);
-    return NULL;  
+    return 0;  
 }  
   
 int BalanceFactor(TTREENODE *pNode) const  
@@ -485,7 +488,7 @@ void Insert(unsigned long int key, unsigned long int value)
         }  
     }  
 }       
-  
+
 void FreeNode(TTREENODE *pNode)
 {
     if(pNode)
@@ -493,7 +496,7 @@ void FreeNode(TTREENODE *pNode)
        // dm_meta->dm_node_num--;
         pm_meta->address[pNode->pmem_id]->is_empty = true;
         pmem_msync(&pm_meta->address[pNode->pmem_id]->is_empty, 1); 
-        //free(pNode);  
+        free(pNode);  
         pNode = NULL;
     }
     else 
@@ -918,6 +921,10 @@ int BalanceRightBranch(TTREENODE *pNode)
   
 int remove(TTREENODE *pNode, KV_SIZE key)  
 {  
+    if(key == 0)
+    {
+        return -1;
+    }
     int n = pNode->nItems;  
     KV_SIZE keymin = pNode->item[0].key;  
     KV_SIZE keymax = pNode->item[n > 0 ? n - 1 : 0].key;  
@@ -935,8 +942,7 @@ int remove(TTREENODE *pNode, KV_SIZE key)
             }  
             if (h > 0)  
             {   
-                int ret = BalanceLeftBranch(pNode);
-                return ret;
+                return    BalanceLeftBranch(pNode);
             }  
             else if (h == 0)  
             {   
@@ -973,7 +979,7 @@ int remove(TTREENODE *pNode, KV_SIZE key)
                     }   
                 }   
                 TTREENODE *pLeftId = pNode->left, *pRightId = pNode->right;  
-                if (n <= MIN_KEY)  
+                if (0 < n <= MIN_KEY)  
                 {   
                     if (pLeftId != 0 && pNode->bf <= 0)  
                     {    
@@ -1010,8 +1016,8 @@ int remove(TTREENODE *pNode, KV_SIZE key)
                         }  
                         while (++i < n)  
                         {   
-                            pNode->item[i].key = pNode->item[i-1].key;
-                            pNode->item[i].value = pNode->item[i-1].value;
+                            pNode->item[i-1].key = pNode->item[i].key;
+                            pNode->item[i-1].value = pNode->item[i].value;
                         }
                         pNode->item[n-1].key = pRightId->item[0].key;
                         pNode->item[n-1].value = pRightId->item[0].value;
@@ -1102,7 +1108,7 @@ void InOrderTraverse(TTREENODE *pNode) const
         int nSize = pNode->nItems;  
         for (int i = 0; i < nSize; i++)  
         {  
-            printf("%ld ", pNode->item[i].key);  
+            printf("%d ", pNode->item[i].key);  
         }   
         InOrderTraverse(pNode->right);   
     }  
@@ -1117,7 +1123,7 @@ void PostOrderTraverse(TTREENODE *pNode) const
         int nSize = pNode->nItems;  
         for (int i = 0; i < nSize; i++)  
         {  
-            printf("%ld ", pNode->item[i].key);  
+            printf("%d ", pNode->item[i].key);  
         }  
     }  
 }   
@@ -1129,7 +1135,7 @@ void PreOrderTraverse(TTREENODE *pNode) const
         int nSize = pNode->nItems;  
         for (int i = 0; i < nSize; i++)  
         {  
-            printf("%ld ", pNode->item[i].key);  
+            printf("%d ", pNode->item[i].key);  
         }  
         PreOrderTraverse(pNode->left);   
         PreOrderTraverse(pNode->right);   
