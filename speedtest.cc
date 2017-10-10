@@ -18,6 +18,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 
+#include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
 #include <fstream>
@@ -242,22 +243,35 @@ public:
     {
         MapType map;
 
+        clock_t begin, insert_end, find_end, delete_end; 
+        
+        begin = clock();
+        std::cout<<"time is: "<<(double)(begin)/CLOCKS_PER_SEC<<std::endl;
         srand(randseed);
         for (unsigned int i = 0; i < items; i++) {
             unsigned int r = rand();
             map.insert(std::make_pair(r, r));
         }
-
+        insert_end = clock();
+        std::cout<<"time is: "<<(double)(insert_end)/CLOCKS_PER_SEC<<std::endl;
         //assert(map.size() == items);
 
         srand(randseed);
-        for (unsigned int i = 0; i < items; i++)
-            map.find(rand());
+        for (unsigned int i = 0; i < items; i++){
+            map.find(rand());}
+        find_end = clock();
+        std::cout<<"time is: "<<(double)(find_end)/CLOCKS_PER_SEC<<std::endl;
+
 
         srand(randseed);
-        for (unsigned int i = 0; i < items; i++)
-            map.erase(rand());
+        for (unsigned int i = 0; i < items; i++){
+            map.erase(rand());}
+        delete_end = clock();
+        std::cout<<"time is: "<<(double)(delete_end)/CLOCKS_PER_SEC<<std::endl;
 
+        std::cout<<"insert latency : "<<(double)(insert_end - begin)/CLOCKS_PER_SEC<<std::endl; 
+        std::cout<<"find latency : "<<(double)(find_end - insert_end)/CLOCKS_PER_SEC<<std::endl; 
+        std::cout<<"delete latency : "<<(double)(delete_end - find_end)/CLOCKS_PER_SEC<<std::endl; 
         //assert(map.empty());
     }
 };
@@ -352,7 +366,7 @@ void testrunner_loop(std::ostream& os, unsigned int items)
 
     do
     {
-        runs = 0;                  // count repetition of timed tests
+        runs++;                  // count repetition of timed tests
 
 
         	//TestClass is STdMap, HashMap, Unordered Map, B+Map

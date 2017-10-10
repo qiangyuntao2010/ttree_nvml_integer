@@ -58,7 +58,7 @@ typedef struct _pmem_node
 {
     bool is_empty;
     //int  node_id;
-    char *start_add;
+    uint8_t* start_add;
 }PMEM_NODE;
 
 
@@ -166,8 +166,8 @@ char *init_alloc()
     }
     char* log = pmemaddr + NODE_SIZE * 2;
     
-    fprintf(stdout,"THE PMEM NODE SIZE IS %ld \n",sizeof(PMEM_NODE));
-    fprintf(stdout,"THE DRAM NODE SIZE IS %ld \n",sizeof(TTREENODE));
+    //fprintf(stdout,"THE PMEM NODE SIZE IS %ld \n",sizeof(PMEM_NODE));
+    //fprintf(stdout,"THE DRAM NODE SIZE IS %ld \n",sizeof(TTREENODE));
     for(count = 0;count < NODE_NUM;count++)
     {
         pm_meta->address[count] = (PMEM_NODE*)malloc(sizeof(PMEM_NODE));
@@ -224,7 +224,7 @@ TTREENODE* FindMin(TTREENODE *pNode)
     {  
         if (pNode->left == NULL)  
         { 
-			fprintf(stdout,"Function %s:The node don not have left node\n",__func__);
+			//fprintf(stdout,"Function %s:The node don not have left node\n",__func__);
             return pNode;  
         }  
         else  
@@ -232,7 +232,7 @@ TTREENODE* FindMin(TTREENODE *pNode)
             return FindMin(pNode->left);  
         }  
     }
-    fprintf(stdout,"FUNCTION %s : THE NODE IS EMPTY",__func__);
+    //fprintf(stdout,"FUNCTION %s : THE NODE IS EMPTY",__func__);
     return NULL;  
 }  
 
@@ -243,24 +243,24 @@ TTREENODE* FindMax(TTREENODE *pNode)
         if (pNode->right == NULL)  
         {  
             return pNode; 
-			fprintf(stdout,"Function %s:The node do not have right node\n",__func__);
+			//fprintf(stdout,"Function %s:The node do not have right node\n",__func__);
         }  
         else  
         {  
             return FindMax(pNode->right);  
         }  
     }  
-    fprintf(stdout,"FUNCTION %s : THE NODE IS EMPTY",__func__);
+    //fprintf(stdout,"FUNCTION %s : THE NODE IS EMPTY",__func__);
     return NULL;  
 }  
   
-  int count = 0;
+ // int count = 0;
   
 unsigned long int Find(const unsigned long int key)  
 { 
     //int count;
-    count++;
-    printf("====count : %d\n",count);
+   // count++;
+   // printf("====count : %d\n",count);
     TTREENODE *pNode = root;  
     while (pNode != NULL)  
     {  
@@ -302,7 +302,7 @@ unsigned long int Find(const unsigned long int key)
             pNode = pNode->right;  
         }  
     }  
-    fprintf(stdout,"The function %s : Can not find the k-v pair\n",__func__);
+    //fprintf(stdout,"The function %s : Can not find the k-v pair\n",__func__);
     return 0;  
 }  
   
@@ -501,7 +501,8 @@ void FreeNode(TTREENODE *pNode)
     }
     else 
     {
-        fprintf(stdout,"THE FUNCTION %s : THE NODE IS EMPTY\n",__func__);
+        //fprintf(stdout,"THE FUNCTION %s : THE NODE IS EMPTY\n",__func__);
+        exit(1);
     }
 }  
   
@@ -514,7 +515,7 @@ TTREENODE *MallocNode()
     if((pNode->pmem_add = find_empty_node(pNode)) == NULL)
     {
        
-        fprintf(stdout,"THE FUNCTION %s : NO MORE PMEM PLACE\n",__func__);
+        //fprintf(stdout,"THE FUNCTION %s : NO MORE PMEM PLACE\n",__func__);
         exit(1);
     }
     return (pNode);  
@@ -813,13 +814,13 @@ int count1 = 0;
 void Delete(KV_SIZE  key)  
 { 
     count1++;
-    printf("===delete : %d and the key is %d===\n",count1,key);
+    //printf("===delete : %d and the key is %d===\n",count1,key);
     TTREENODE *pNode = root;  
     int h = remove(pNode, key);
-    if(h < 0)
+   /* if(h < 0)
     {
         fprintf(stdout,"%s : miss!\n",__func__);
-    }
+    }*/
     //assert(h >= 0);  
     if (pNode != root)  
     {   
@@ -994,7 +995,9 @@ int remove(TTREENODE *pNode, KV_SIZE key)
                         }
                         pNode->item[0].key = pLeftId->item[pLeftId->nItems-1].key;
                         pNode->item[0].value = pLeftId->item[pLeftId->nItems-1].value;
-                        key = pNode->item[0].key;  
+                        key = pNode->item[0].key;
+                        if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true){
+                        pmem_memcpy(pNode->pmem_add, pNode, NODE_SIZE);}
                         TTREENODE *pChildId = pLeftId;  
                         int h = remove(pChildId, pNode->item[0].key);  
                         if (pChildId != pLeftId)   
@@ -1022,6 +1025,8 @@ int remove(TTREENODE *pNode, KV_SIZE key)
                         pNode->item[n-1].key = pRightId->item[0].key;
                         pNode->item[n-1].value = pRightId->item[0].value;
                         key = pNode->item[n-1].key;
+                        if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true){
+                        pmem_memcpy(pNode->pmem_add, pNode, NODE_SIZE);}
                         TTREENODE *pChildId = pRightId;  
                         int h = remove(pChildId, key);  
                         if (pChildId != pRightId)  
@@ -1041,7 +1046,8 @@ int remove(TTREENODE *pNode, KV_SIZE key)
                     pNode->item[i-1].value = pNode->item[i].value;
                 }  
                 pNode->nItems -= 1;  
-                pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
+                if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true){
+                pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);}
                 return 0;  
             }  
         }  
