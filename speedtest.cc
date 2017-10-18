@@ -124,7 +124,7 @@ public:
         for (unsigned int i = 0; i < items; i++)
             set.insert(rand());
 
-        assert(set.size() == items);
+        //assert(set.size() == items);
 
         srand(randseed);
         for (unsigned int i = 0; i < items; i++)
@@ -248,7 +248,7 @@ public:
             map.insert(std::make_pair(r, r));
         }
 
-        assert(map.size() == items);
+        //assert(map.size() == items);
 
         srand(randseed);
         for (unsigned int i = 0; i < items; i++)
@@ -256,9 +256,9 @@ public:
 
         srand(randseed);
         for (unsigned int i = 0; i < items; i++)
-            map.erase(map.find(rand()));
+            map.erase(rand());
 
-        assert(map.empty());
+        //assert(map.empty());
     }
 };
 
@@ -533,7 +533,7 @@ int main()
         }
     }
 #endif
-#if 1
+#if 0
     {   // Map - speed test only insertion
         std::ofstream os("speed-map-insert.txt");
 
@@ -546,35 +546,37 @@ int main()
             std::cout << "map: insert " << items << "\n";
             TestFactory_Map<Test_Map_Insert>().call_testrunner(os, items);
         
-       // }
+    }
 #endif
-#if 0
+#if 1
     {   // Map - speed test insert, find and delete
         std::ofstream os("speed-map-all.txt");
 
+        unsigned int items = minitems;
         repeatuntil = minitems;
 		//minitems = 512000
-        for (unsigned int items =  minitems; items <= maxitems; items *= 2)
-        {
+        //for (unsigned int items =  minitems; items <= maxitems; items *= 2)
+        //{
             std::cerr << "map: insert, find, delete " << items << "\n";
             TestFactory_Map<Test_Map_InsertFindDelete>().call_testrunner(os, items);
-        }
+        //}
     }
 #endif
 #if 0
     {   // Map - speed test find only
         std::ofstream os("speed-map-find.txt");
 
+        unsigned int items = minitems;
         repeatuntil = minitems;
 
-        for (unsigned int items = minitems; items <= maxitems; items *= 2)
-        {
+       // for (unsigned int items = minitems; items <= maxitems; items *= 2)
+       // {
             std::cerr << "map: find " << items << "\n";
             TestFactory_Map<Test_Map_Find>().call_testrunner(os, items);
-        }
+        //}
     }
 #endif
     return 0;
-}
+
 }
 /******************************************************************************/

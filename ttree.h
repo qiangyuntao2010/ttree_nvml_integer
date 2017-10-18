@@ -20,6 +20,7 @@
 #ifndef _TTREE_H_  
 #define _TTREE_H_  
 
+#include <assert.h>
 #include <math.h>  
 #include <assert.h>
 #include <malloc.h>
@@ -40,7 +41,7 @@
 #include <io.h>
 #endif
 
-//#define KV_SIZE 8
+#define KV_SIZE unsigned int
 #define NODE_SIZE 2048
 #define ITEM_NUM 125
 #define MIN_KEY (125-2)
@@ -55,7 +56,7 @@ namespace stx{
 typedef struct _pmem_node
 {
     bool is_empty;
-    int  node_id;
+    //int  node_id;
     char *start_add;
 }PMEM_NODE;
 
@@ -67,25 +68,25 @@ typedef struct _pm_meta_data
 
 typedef struct _key_value_pair
 {
-    unsigned long int key;
-    unsigned long int value;
+    KV_SIZE key;
+    KV_SIZE value;
 }kv_t;
 
-typedef struct meta_node
+/*typedef struct meta_node
 {
     unsigned long int  dm_node_num;
-}DM_META;
+}DM_META;*/
   
 typedef struct tagTTREENODE  
 {   
     char *pmem_add;
-    int pmem_id;
+    unsigned int pmem_id;
 	tagTTREENODE *left;         // Left child pointer.  
     tagTTREENODE *right;        // Right child pointer.  
     int nItems;  // Internal node items.  
     kv_t item[ITEM_NUM];
     char bf;                   // Balabce factor(bf = right subtree height - left subtree height)     
-} TTREENODE;  
+}TTREENODE;  
 
 template  <typename Key>
 class ttree_default_set_traits
@@ -107,7 +108,7 @@ private:
 
 TTREENODE *root;
 
-DM_META *dm_meta;
+//DM_META *dm_meta;
 
 PM_META *pm_meta;
 
@@ -123,10 +124,10 @@ CTtree()
 
     root = NULL;
 
-    if((dm_meta = (DM_META*)malloc(sizeof(DM_META))) == NULL)
+    /*if((dm_meta = (DM_META*)malloc(sizeof(DM_META))) == NULL)
     {
         perror("d_meta malloc error!");
-    }
+    }*/
 
     if((pm_meta = (PM_META*)malloc(sizeof(PM_META))) == NULL)
     {
@@ -160,20 +161,22 @@ char *init_alloc()
         perror("pmem_map_file");
         exit(1);
     }
+    char* log = pmemaddr + NODE_SIZE * 2;
+    
     fprintf(stdout,"THE PMEM NODE SIZE IS %ld \n",sizeof(PMEM_NODE));
     fprintf(stdout,"THE DRAM NODE SIZE IS %ld \n",sizeof(TTREENODE));
     for(count = 0;count < NODE_NUM;count++)
     {
         pm_meta->address[count] = (PMEM_NODE*)malloc(sizeof(PMEM_NODE));
-        if((pm_meta->address[count]->start_add = pmemaddr+ NODE_SIZE*2 + count * NODE_SIZE) == NULL)
+        if((pm_meta->address[count]->start_add = log + count * NODE_SIZE) == NULL)
         {
             perror("pmem allocation error!");
             exit(1);
         }
-        pm_meta->address[count]->node_id = count;
+        //pm_meta->address[count]->node_id = count;
         pm_meta->address[count]->is_empty = true;
     }
-    return pmemaddr;
+    return log;
 }
 
 char *find_empty_node(TTREENODE *pNode)
@@ -184,7 +187,7 @@ char *find_empty_node(TTREENODE *pNode)
         if(pm_meta->address[count]->is_empty == true)
         {
             pNode->pmem_id = count;
-            pNode->pmem_add = pm_meta->address[count]->start_add;
+      //      pNode->pmem_add = pm_meta->address[count]->start_add;
             pm_meta->address[count]->is_empty = false;
             return pm_meta->address[count]->start_add;
         }
@@ -248,9 +251,13 @@ TTREENODE* FindMax(TTREENODE *pNode)
     return NULL;  
 }  
   
+  int count = 0;
   
 unsigned long int Find(const unsigned long int key)  
-{  
+{ 
+    //int count;
+    count++;
+    printf("====count : %d\n",count);
     TTREENODE *pNode = root;  
     while (pNode != NULL)  
     {  
@@ -374,10 +381,10 @@ TTREENODE *SingleRotateLeft(TTREENODE *pNode)
     // Adjust the balance factor.  
     pNode->bf = BalanceFactor(pNode);  
     K->bf = BalanceFactor(K);
-    if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))&&(pmem_memcpy(pmemaddr+NODE_SIZE,K,sizeof(TTREENODE)))) == true)
+    if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)&&(pmem_memcpy(pmemaddr+NODE_SIZE,K,NODE_SIZE))) == true)
     {
-    pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
-    pmem_memcpy(K->pmem_add,K,sizeof(TTREENODE));
+    pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
+    pmem_memcpy(K->pmem_add,K,NODE_SIZE);
     }
     else
     {
@@ -399,10 +406,10 @@ TTREENODE *SingleRotateRight(TTREENODE *pNode)
     // Adjust the balance factor.  
     pNode->bf = BalanceFactor(pNode);  
     K->bf = BalanceFactor(K);  
-    if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))&&(pmem_memcpy(pmemaddr+NODE_SIZE,K,sizeof(TTREENODE)))) == true)
+    if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)&&(pmem_memcpy(pmemaddr+NODE_SIZE,K,NODE_SIZE))) == true)
     {
-    pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
-    pmem_memcpy(K->pmem_add,K,sizeof(TTREENODE));
+    pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
+    pmem_memcpy(K->pmem_add,K,NODE_SIZE);
     }
     else
     {
@@ -422,9 +429,9 @@ TTREENODE *DoubleRotateLeft(TTREENODE *pNode)
     // Adjust the balance factor.  
     pNode->bf = BalanceFactor(pNode);  
     
-    if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) == true)
+    if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true)
     {
-    pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+    pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
     }
     else
     {
@@ -443,9 +450,9 @@ TTREENODE *DoubleRotateRight(TTREENODE *pNode)
       
     // Adjust the balance factor.  
     pNode->bf = BalanceFactor(pNode);  
-    if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) == true)
+    if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true)
     {
-    pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+    pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
     }
     else
     {
@@ -459,7 +466,7 @@ void Insert(unsigned long int key, unsigned long int value)
 
     if (root == NULL)  
     {
-        root = (TTREENODE*)malloc(sizeof(TTREENODE));
+        root = (TTREENODE*)malloc(NODE_SIZE);
         root->pmem_add = init_alloc(); 
         root->item[0].key = key;
         root->item[0].value =value;
@@ -481,11 +488,12 @@ void Insert(unsigned long int key, unsigned long int value)
   
 void FreeNode(TTREENODE *pNode)
 {
-    if(pNode != NULL)
+    if(pNode)
     {
-        dm_meta->dm_node_num--;
+       // dm_meta->dm_node_num--;
         pm_meta->address[pNode->pmem_id]->is_empty = true;
-        free(pNode);  
+        pmem_msync(&pm_meta->address[pNode->pmem_id]->is_empty, 1); 
+        //free(pNode);  
         pNode = NULL;
     }
     else 
@@ -497,9 +505,9 @@ void FreeNode(TTREENODE *pNode)
 TTREENODE *MallocNode()  
 {  
     TTREENODE *pNode;
-    pNode = (TTREENODE*)(malloc(sizeof(TTREENODE)));  
-    memset(pNode, 0, sizeof(TTREENODE));  
-    dm_meta->dm_node_num++;
+    pNode = (TTREENODE*)(malloc(NODE_SIZE));  
+    memset(pNode, 0x00, NODE_SIZE);  
+  //  dm_meta->dm_node_num++;
     if((pNode->pmem_add = find_empty_node(pNode)) == NULL)
     {
        
@@ -528,9 +536,9 @@ bool _insert(TTREENODE *pNode, unsigned long int key, unsigned long int value)
             pNode->item[0].key = key;
             pNode->item[0].value = value;
             pNode->nItems += 1;
-            if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) == true)
+            if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true)
             {
-            pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+            pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
             }
             else
             {
@@ -544,10 +552,10 @@ bool _insert(TTREENODE *pNode, unsigned long int key, unsigned long int value)
             pNode->item[0].value = value;
             pLeftId->nItems += 1;          
             pNode->left = pLeftId; 
-            if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE)))&&(pmem_memcpy(pmemaddr+NODE_SIZE,pLeftId,sizeof(TTREENODE))) == true)
+            if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE))&&(pmem_memcpy(pmemaddr+NODE_SIZE,pLeftId,NODE_SIZE)) == true)
             {
-            pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
-            pmem_memcpy(pLeftId->pmem_add,pLeftId,sizeof(TTREENODE));
+            pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
+            pmem_memcpy(pLeftId->pmem_add,pLeftId,NODE_SIZE);
             }
             else
             {
@@ -571,9 +579,9 @@ bool _insert(TTREENODE *pNode, unsigned long int key, unsigned long int value)
         if (pNode->bf > 0)   
         {   
             pNode->bf = 0;
-            if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) == true)
+            if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true)
             {
-            pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+            pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
             }
             else
             {
@@ -584,9 +592,9 @@ bool _insert(TTREENODE *pNode, unsigned long int key, unsigned long int value)
         else if (pNode->bf == 0)   
         {   
             pNode->bf = -1;     
-            if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) == true)
+            if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true)
             {
-            pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+            pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
             }
             else
             {
@@ -617,9 +625,9 @@ bool _insert(TTREENODE *pNode, unsigned long int key, unsigned long int value)
             pNode->item[n].key = key;
             pNode->item[n].value = value;
             pNode->nItems += 1;  
-            if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) == true)
+            if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true)
             {
-            pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+            pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
             }
             else
             {
@@ -634,10 +642,10 @@ bool _insert(TTREENODE *pNode, unsigned long int key, unsigned long int value)
             pRightId->item[0].value = value;
             pRightId->nItems += 1;  
             pNode->right = pRightId;
-            if(((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) && (pmem_memcpy(pmemaddr+NODE_SIZE,pRightId,sizeof(TTREENODE))))== true)
+            if(((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) && (pmem_memcpy(pmemaddr+NODE_SIZE,pRightId,NODE_SIZE)))== true)
             {
-            pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
-            pmem_memcpy(pRightId->pmem_add,pRightId,sizeof(TTREENODE));
+            pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
+            pmem_memcpy(pRightId->pmem_add,pRightId,NODE_SIZE);
             }
             else
             {
@@ -660,9 +668,9 @@ bool _insert(TTREENODE *pNode, unsigned long int key, unsigned long int value)
         if (pNode->bf < 0)   
         {   
             pNode->bf = 0;  
-            if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) == true)
+            if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true)
             {
-            pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+            pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
             }
             else
             {
@@ -673,9 +681,9 @@ bool _insert(TTREENODE *pNode, unsigned long int key, unsigned long int value)
         else if (pNode->bf == 0)   
         {   
             pNode->bf = 1;  
-            if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) == true)
+            if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true)
             {
-            pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+            pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
             }
             else
             {
@@ -726,9 +734,9 @@ bool _insert(TTREENODE *pNode, unsigned long int key, unsigned long int value)
         }  
         pNode->item[r].key = key;
         pNode->nItems += 1;  
-        if((pmem_memcpy(pmemaddr,pNode,sizeof(TTREENODE))) == true)
+        if((pmem_memcpy(pmemaddr,pNode,NODE_SIZE)) == true)
         {
-        pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+        pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
         }
         else
         {
@@ -797,12 +805,19 @@ void _earse(TTREENODE *pNode)
   
     FreeNode(pNode);  
 }  
-  
-void Delete(unsigned long int key)  
-{  
+int count1 = 0;
+
+void Delete(KV_SIZE  key)  
+{ 
+    count1++;
+    printf("===delete : %d and the key is %d===\n",count1,key);
     TTREENODE *pNode = root;  
-    int h = remove(pNode, key);  
-    assert(h >= 0);  
+    int h = remove(pNode, key);
+    if(h < 0)
+    {
+        fprintf(stdout,"%s : miss!\n",__func__);
+    }
+    //assert(h >= 0);  
     if (pNode != root)  
     {   
         root = pNode;  
@@ -814,14 +829,14 @@ int BalanceLeftBranch(TTREENODE *pNode)
     if (pNode->bf < 0)  
     {   
         pNode->bf = 0;
-        pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+        pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
         return 1;  
     }   
     else if (pNode->bf == 0)  
     {   
        
         pNode->bf = 1;  
-        pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+        pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
         return 0;  
     }   
     else  
@@ -834,16 +849,16 @@ int BalanceLeftBranch(TTREENODE *pNode)
             {  
                 pNode->bf = 1;  
                 pRightId->bf = -1;
-                pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
-                pmem_memcpy(pRightId->pmem_add,pRightId,sizeof(TTREENODE));
+                pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
+                pmem_memcpy(pRightId->pmem_add,pRightId,NODE_SIZE);
                 return 0;  
             }  
             else  
             {  
                 pNode->bf = 0;  
                 pRightId->bf = 0;  
-                pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
-                pmem_memcpy(pRightId->pmem_add,pRightId,sizeof(TTREENODE));
+                pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
+                pmem_memcpy(pRightId->pmem_add,pRightId,NODE_SIZE);
                 return 1;  
             }  
         }   
@@ -860,13 +875,13 @@ int BalanceRightBranch(TTREENODE *pNode)
     if (pNode->bf > 0)  
     {   
         pNode->bf = 0;  
-        pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+        pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
         return 1;  
     }   
     else if (pNode->bf == 0)  
     {   
         pNode->bf = -1;  
-        pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+        pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
         return 0;  
     }   
     else  
@@ -879,16 +894,16 @@ int BalanceRightBranch(TTREENODE *pNode)
             {  
                 pNode->bf = -1;  
                 pLeftId->bf = 1;  
-                pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
-                pmem_memcpy(pLeftId->pmem_add,pLeftId,sizeof(TTREENODE));
+                pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
+                pmem_memcpy(pLeftId->pmem_add,pLeftId,NODE_SIZE);
                 return 0;  
             }  
             else  
             {  
                 pNode->bf = 0;  
                 pLeftId->bf = 0;  
-                pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
-                pmem_memcpy(pLeftId->pmem_add,pLeftId,sizeof(TTREENODE));
+                pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
+                pmem_memcpy(pLeftId->pmem_add,pLeftId,NODE_SIZE);
                 return 1;  
             }  
         }   
@@ -901,11 +916,11 @@ int BalanceRightBranch(TTREENODE *pNode)
     return 0;  
 }  
   
-int remove(TTREENODE *pNode, unsigned long int key)  
+int remove(TTREENODE *pNode, KV_SIZE key)  
 {  
     int n = pNode->nItems;  
-    unsigned long int keymin = pNode->item[0].key;  
-    unsigned long int keymax = pNode->item[n > 0 ? n - 1 : 0].key;  
+    KV_SIZE keymin = pNode->item[0].key;  
+    KV_SIZE keymax = pNode->item[n > 0 ? n - 1 : 0].key;  
     int nDiff = keycompare(key, keymin);  
     if (nDiff <= 0)  
     {   
@@ -925,11 +940,11 @@ int remove(TTREENODE *pNode, unsigned long int key)
             }  
             else if (h == 0)  
             {   
-                pmem_memcpy(pNode->pmem_add,pNode->left,sizeof(TTREENODE));
+                //pmem_memcpy(pNode->pmem_add,pNode->left,NODE_SIZE);
                 return 0;  
             }  
         }  
-        assert (nDiff == 0);  
+       // assert (nDiff == 0);  
     }  
     nDiff = keycompare(key, keymax);  
     if (nDiff <= 0)   
@@ -945,7 +960,7 @@ int remove(TTREENODE *pNode, unsigned long int key)
                         TTREENODE *pTempNode = pNode->left;  
                         FreeNode(pNode);  
                         pNode = pTempNode;
-                        pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+                        //pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
                         return 1;  
                     }  
                     else if (pNode->left == 0)   
@@ -953,7 +968,7 @@ int remove(TTREENODE *pNode, unsigned long int key)
                         TTREENODE *pTempNode = pNode->right;  
                         FreeNode(pNode);  
                         pNode = pTempNode;
-                        pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+                        //pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
                         return 1;  
                     }   
                 }   
@@ -971,7 +986,7 @@ int remove(TTREENODE *pNode, unsigned long int key)
                             pNode->item[i+1].key = pNode->item[i].key;
                             pNode->item[i+1].value = pNode->item[i].value;
                         }
-                          pNode->item[0].key = pLeftId->item[pLeftId->nItems-1].key;
+                        pNode->item[0].key = pLeftId->item[pLeftId->nItems-1].key;
                         pNode->item[0].value = pLeftId->item[pLeftId->nItems-1].value;
                         key = pNode->item[0].key;  
                         TTREENODE *pChildId = pLeftId;  
@@ -984,7 +999,7 @@ int remove(TTREENODE *pNode, unsigned long int key)
                         {  
                             h = BalanceLeftBranch(pNode);  
                         }  
-                        pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+                        //pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
                         return h;  
                     }   
                     else if (pNode->right != 0)   
@@ -1020,7 +1035,7 @@ int remove(TTREENODE *pNode, unsigned long int key)
                     pNode->item[i-1].value = pNode->item[i].value;
                 }  
                 pNode->nItems -= 1;  
-                pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+                pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
                 return 0;  
             }  
         }  
@@ -1040,7 +1055,7 @@ int remove(TTREENODE *pNode, unsigned long int key)
         }  
         else  
         {   
-            pmem_memcpy(pNode->pmem_add,pNode,sizeof(TTREENODE));
+            //pmem_memcpy(pNode->pmem_add,pNode,NODE_SIZE);
             return h;  
         }  
     }  
@@ -1120,6 +1135,7 @@ void PreOrderTraverse(TTREENODE *pNode) const
         PreOrderTraverse(pNode->right);   
     }    
 }
+
 
 
 };
